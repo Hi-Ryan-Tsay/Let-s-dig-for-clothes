@@ -11,14 +11,14 @@
                 extend: {
                     colors: {
                         earth: {
-                            100: '#F5F5DC', // 米白背景
+                            100: '#F5F5DC', 
                             200: '#E8E4C9',
-                            600: '#8B7355', // 深卡其文字
-                            800: '#5C4033', // 深棕色標題
+                            600: '#8B7355', 
+                            800: '#5C4033', 
                         },
                         leaf: {
                             500: '#4CAF50',
-                            600: '#388E3C', // 正確綠色
+                            600: '#388E3C', 
                         }
                     }
                 }
@@ -26,10 +26,16 @@
         }
     </script>
     <style>
-        /* 隱藏未啟用的區塊 */
         .hidden-screen { display: none !important; }
-        /* 防止選取文字導致畫面閃爍 */
         body { user-select: none; }
+        
+        /* 連連看答錯時的震動特效 */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        .shake-animation { animation: shake 0.4s ease-in-out; }
     </style>
 </head>
 <body class="bg-earth-100 text-earth-800 font-sans min-h-screen flex flex-col">
@@ -56,10 +62,14 @@
                 <span class="text-xl font-bold text-leaf-600">目前得分：<span id="current-score">0</span></span>
             </div>
             
-            <h2 id="question-text" class="text-2xl md:text-3xl font-bold text-earth-800 mb-8 leading-snug">
+            <h2 id="question-text" class="text-2xl md:text-3xl font-bold text-earth-800 mb-2 leading-snug">
                 </h2>
+            
+            <p id="matching-hint" class="hidden-screen text-earth-600 font-bold mb-6 bg-earth-100 p-2 rounded-lg text-center">
+                💡 遊戲提示：請先點擊左側項目，再點擊右側對應項目進行配對！
+            </p>
 
-            <div id="options-container" class="space-y-4">
+            <div id="options-container" class="space-y-4 mt-6">
                 </div>
         </div>
 
@@ -88,8 +98,7 @@
             <div class="p-8">
                 <div class="mb-8">
                     <h4 class="text-lg font-bold text-gray-500 mb-2">💡 觀念解析：</h4>
-                    <p id="modal-explanation" class="text-2xl font-semibold text-earth-800 leading-relaxed">
-                        </p>
+                    <p id="modal-explanation" class="text-2xl font-semibold text-earth-800 leading-relaxed"></p>
                 </div>
                 <button onclick="nextQuestion()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 text-xl font-bold py-4 rounded-xl transition active:scale-95">
                     我知道了，下一題 ➡️
@@ -99,45 +108,34 @@
     </div>
 
     <script>
-        // 題庫資料 (JSON)
+        // 題庫資料：新增了連連看題型 (type: 'matching')
         const allQuestions = [
             {
+                type: "matching",
+                question: "連連看：請將下列衣物連到最適合的歸宿",
+                pairs: [
+                    { left: "全新未拆封內衣褲", right: "災區" },
+                    { left: "八成新素色外套", right: "二手商店" },
+                    { left: "泛黃破洞的T恤", right: "舊衣回收或丟棄" }
+                ],
+                explanation: "不同的衣物狀況有最適合的歸宿，換位思考最重要！"
+            },
+            {
+                type: "choice",
                 question: "是非題：聽說災區很缺物資，所以我把衣櫃裡起毛球但還能穿的舊T-shirt全捐過去，這樣算是雪中送炭嗎？",
                 options: ["⭕ 是的", "❌ 錯的"],
                 answer: "❌ 錯的",
                 explanation: "災區無水電與人力整理，不需要清庫存的淘汰衣物。"
             },
             {
-                question: "是非題：我想捐貼身衣物給災區的受難者，只要我先在家裡用漂白水洗得非常乾淨，就可以捐出去了。",
-                options: ["⭕ 是的", "❌ 錯的"],
-                answer: "❌ 錯的",
-                explanation: "為了避免衛生疑慮與傳染病，災區的貼身衣物必須是「全新未拆封」的。"
-            },
-            {
+                type: "choice",
                 question: "是非題：二手衣循環的核心觀念是：「只要這件衣服沒破洞，就可以捐到二手商店賣」。",
                 options: ["⭕ 是的", "❌ 錯的"],
                 answer: "❌ 錯的",
                 explanation: "核心觀念是「換位思考：如果你是買家，你會想花錢買它嗎？」若是奇裝異服或過舊，只會徒增店員挑選的心力。"
             },
             {
-                question: "是非題：看到災難新聞想要捐衣服救災時，最負責任的做法是「先實際了解當地的氣候與需求情況後，再挑選合適的衣物捐出」。",
-                options: ["⭕ 是的", "❌ 錯的"],
-                answer: "⭕ 是的",
-                explanation: "不盲目寄送，確認對方真正需要什麼，才能真正做到「雪中送炭」。"
-            },
-            {
-                question: "是非題：判斷一件衣服適不適合捐給二手商店的最高準則，就是捫心自問：「如果我是買家，我會想買這件衣服嗎？」",
-                options: ["⭕ 是的", "❌ 錯的"],
-                answer: "⭕ 是的",
-                explanation: "二手店需要能「找到下個主人」的衣物，而不是幫忙清庫存的回收站。"
-            },
-            {
-                question: "是非題：災區因為通常無水無電，且逃生路線可能充滿障礙物，所以相比於好看的流行服飾，捐贈「具備高機動性」且「實用乾淨」的衣服才是災民最需要的。",
-                options: ["⭕ 是的", "❌ 錯的"],
-                answer: "⭕ 是的",
-                explanation: "災區要的是「即戰力」，災民需要立刻能穿上並方便活動的衣服來度過難關。"
-            },
-            {
+                type: "choice",
                 question: "如果你想幫助災區，但你不確定當地現在的天氣和具體狀況，你應該怎麼做最負責任？",
                 options: [
                     "(A) 只要是衣服就先裝箱寄過去再說，總會有人需要。",
@@ -148,26 +146,7 @@
                 explanation: "不盲目寄送才是負責任的表現。"
             },
             {
-                question: "你正在整理衣櫃，發現有幾件衣服已經穿不到了。請問以下哪一件衣服，最適合捐給二手衣店？",
-                options: [
-                    "(A) 去年只穿過一次，但領口已經發黃的白色 T-shirt",
-                    "(B) 八成新、沒有髒污，且已經清洗乾淨的素色連帽外套",
-                    "(C) 參加大學迎新營隊時發的「第 15 屆某某小隊」隊服"
-                ],
-                answer: "(B) 八成新、沒有髒污，且已經清洗乾淨的素色連帽外套",
-                explanation: "二手店需要的是沒有破損泛黃、穿搭適配性高的衣物。印有專屬標誌的衣服通常只會在架上長灰塵。"
-            },
-            {
-                question: "看到國內發生嚴重天災，如果你想要捐贈內衣褲給災民，請問以下哪一種作法才是真正的「雪中送炭」？",
-                options: [
-                    "(A) 把自己穿過但保存良好的內衣褲，徹底洗淨後捐出",
-                    "(B) 直接購買全新未拆封的貼身衣物捐出",
-                    "(C) 把退色鬆垮的舊內褲捐出去，反正災區有的穿就好"
-                ],
-                answer: "(B) 直接購買全新未拆封的貼身衣物捐出",
-                explanation: "災區缺乏水電與醫療資源，為避免衛生疑慮與傳染病，貼身衣物必須是全新未拆封的。"
-            },
-            {
+                type: "choice",
                 question: "準備把衣服捐給二手商店前，最應該問自己的一句話是什麼？",
                 options: [
                     "(A) 「送出去的這件衣物，如果我自己是買家，我會想買嗎？」",
@@ -176,32 +155,24 @@
                 ],
                 answer: "(A) 「送出去的這件衣物，如果我自己是買家，我會想買嗎？」",
                 explanation: "「換位思考」是負責任捐贈的靈魂。確保衣服狀況良好，它才有機會再次循環。"
-            },
-            {
-                question: "下列哪一種心態或行為，無論是面對災區還是二手商店，都屬於雪上加霜行為？",
-                options: [
-                    "(A) 只要是衣服就裝箱捐出，完全不確認對方是否需要、也不管當地天氣",
-                    "(B) 捐贈前，先將衣物清洗乾淨並摺好",
-                    "(C) 捐贈前先了解災區的實際需求清單"
-                ],
-                answer: "(A) 只要是衣服就裝箱捐出，完全不確認對方是否需要、也不管當地天氣",
-                explanation: "「盲目寄送」與「清庫存心態」會消耗後端龐大的人力與物力。"
             }
         ];
 
-        // 系統變數
+        // 系統狀態變數
         let currentSessionQuestions = [];
         let currentQuestionIndex = 0;
         let currentScore = 0;
         let isAnswerLocked = false;
         const totalQuestionsPerGame = 3;
 
-        // 初始化載入：讀取總人次
-        window.onload = () => {
-            updateTotalPlayersDisplay();
-        };
+        // 連連看專屬變數
+        let selectedLeftBtn = null;
+        let selectedRightBtn = null;
+        let matchedPairsCount = 0;
+        let currentQuestionMistakes = 0;
 
-        // 讀取/更新總遊玩人次
+        window.onload = () => { updateTotalPlayersDisplay(); };
+
         function updateTotalPlayersDisplay() {
             let total = localStorage.getItem('thriftStoreGamePlayers') || 0;
             document.getElementById('total-players').innerText = total;
@@ -213,7 +184,6 @@
             updateTotalPlayersDisplay();
         }
 
-        // 打亂陣列工具函數 (Fisher-Yates Shuffle)
         function shuffleArray(array) {
             let shuffled = [...array];
             for (let i = shuffled.length - 1; i > 0; i--) {
@@ -223,7 +193,6 @@
             return shuffled;
         }
 
-        // 流程控制：隱藏所有畫面
         function hideAllScreens() {
             document.getElementById('screen-home').classList.add('hidden-screen');
             document.getElementById('screen-quiz').classList.add('hidden-screen');
@@ -231,20 +200,15 @@
             document.getElementById('counter-display').classList.add('hidden-screen');
         }
 
-        // 開始挑戰
         function startGame() {
             hideAllScreens();
             document.getElementById('screen-quiz').classList.remove('hidden-screen');
-            
-            // 隨機抽選3題
             currentSessionQuestions = shuffleArray(allQuestions).slice(0, totalQuestionsPerGame);
             currentQuestionIndex = 0;
             currentScore = 0;
-            
             loadQuestion();
         }
 
-        // 載入當前題目
         function loadQuestion() {
             isAnswerLocked = false;
             document.getElementById('current-score').innerText = currentScore;
@@ -252,29 +216,34 @@
             
             const q = currentSessionQuestions[currentQuestionIndex];
             document.getElementById('question-text').innerText = q.question;
-            
             const optionsContainer = document.getElementById('options-container');
+            const matchingHint = document.getElementById('matching-hint');
             optionsContainer.innerHTML = '';
             
-            // 產生選項按鈕
-            q.options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = "w-full text-left text-xl font-semibold bg-earth-100 hover:bg-earth-200 text-earth-800 p-5 rounded-2xl border-2 border-earth-200 transition active:scale-95";
-                btn.innerText = opt;
-                btn.onclick = () => handleAnswer(opt, q.answer, q.explanation, btn);
-                optionsContainer.appendChild(btn);
-            });
+            if (q.type === 'choice') {
+                matchingHint.classList.add('hidden-screen');
+                optionsContainer.className = "space-y-4 mt-6";
+                q.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left text-xl font-semibold bg-earth-100 hover:bg-earth-200 text-earth-800 p-5 rounded-2xl border-2 border-earth-200 transition active:scale-95";
+                    btn.innerText = opt;
+                    btn.onclick = () => handleChoiceAnswer(opt, q.answer, q.explanation, btn);
+                    optionsContainer.appendChild(btn);
+                });
+            } else if (q.type === 'matching') {
+                matchingHint.classList.remove('hidden-screen');
+                optionsContainer.className = "grid grid-cols-2 gap-4 mt-6";
+                renderMatchingGame(q, optionsContainer);
+            }
         }
 
-        // 處理作答邏輯
-        function handleAnswer(selectedOption, correctAnswer, explanation, clickedBtn) {
+        /* ========== 單選題邏輯 ========== */
+        function handleChoiceAnswer(selectedOption, correctAnswer, explanation, clickedBtn) {
             if (isAnswerLocked) return;
-            isAnswerLocked = true; // 防連點鎖定
-
+            isAnswerLocked = true;
             const isCorrect = (selectedOption === correctAnswer);
             
-            // 視覺回饋 (選中狀態)
-            clickedBtn.classList.remove('bg-earth-100', 'border-earth-200');
+            clickedBtn.classList.remove('bg-earth-100', 'border-earth-200', 'hover:bg-earth-200');
             if (isCorrect) {
                 currentScore++;
                 document.getElementById('current-score').innerText = currentScore;
@@ -283,13 +252,119 @@
                 clickedBtn.classList.add('bg-red-500', 'text-white', 'border-red-600');
             }
 
-            // 稍微延遲後顯示解析彈窗
-            setTimeout(() => {
-                showFeedbackModal(isCorrect, explanation);
-            }, 300);
+            setTimeout(() => { showFeedbackModal(isCorrect, explanation); }, 300);
         }
 
-        // 顯示解析彈窗
+        /* ========== 連連看邏輯 ========== */
+        function renderMatchingGame(q, container) {
+            selectedLeftBtn = null;
+            selectedRightBtn = null;
+            matchedPairsCount = 0;
+            currentQuestionMistakes = 0;
+
+            const leftCol = document.createElement('div');
+            leftCol.className = "space-y-3";
+            const rightCol = document.createElement('div');
+            rightCol.className = "space-y-3";
+            
+            container.appendChild(leftCol);
+            container.appendChild(rightCol);
+
+            let leftItems = q.pairs.map(p => ({ text: p.left, target: p.right }));
+            let rightItems = q.pairs.map(p => ({ text: p.right, target: p.left }));
+            
+            leftItems = shuffleArray(leftItems);
+            rightItems = shuffleArray(rightItems);
+
+            leftItems.forEach(item => {
+                const btn = createMatchBtn(item.text, 'left', item.target);
+                leftCol.appendChild(btn);
+            });
+            rightItems.forEach(item => {
+                const btn = createMatchBtn(item.text, 'right', item.target);
+                rightCol.appendChild(btn);
+            });
+        }
+
+        function createMatchBtn(text, side, targetMatch) {
+            const btn = document.createElement('button');
+            btn.className = "w-full text-center sm:text-left text-base sm:text-lg font-semibold bg-earth-100 text-earth-800 p-4 rounded-xl border-2 border-earth-200 transition-all duration-200";
+            btn.innerText = text;
+            btn.dataset.side = side;
+            btn.dataset.text = text;
+            btn.dataset.target = targetMatch;
+            btn.onclick = () => handleMatchClick(btn);
+            return btn;
+        }
+
+        function handleMatchClick(btn) {
+            if (btn.disabled || isAnswerLocked) return;
+            const side = btn.dataset.side;
+            
+            // 處理選取外框樣式
+            if (side === 'left') {
+                if (selectedLeftBtn) selectedLeftBtn.classList.remove('ring-4', 'ring-earth-600', 'border-earth-600');
+                selectedLeftBtn = btn;
+            } else {
+                if (selectedRightBtn) selectedRightBtn.classList.remove('ring-4', 'ring-earth-600', 'border-earth-600');
+                selectedRightBtn = btn;
+            }
+            btn.classList.add('ring-4', 'ring-earth-600', 'border-earth-600');
+            
+            // 兩邊都選了就進行比對
+            if (selectedLeftBtn && selectedRightBtn) {
+                checkMatchPair();
+            }
+        }
+
+        function checkMatchPair() {
+            const left = selectedLeftBtn;
+            const right = selectedRightBtn;
+            
+            selectedLeftBtn = null;
+            selectedRightBtn = null;
+            
+            if (left.dataset.target === right.dataset.text) {
+                // 配對成功
+                [left, right].forEach(b => {
+                    b.classList.replace('bg-earth-100', 'bg-leaf-500');
+                    b.classList.replace('text-earth-800', 'text-white');
+                    b.classList.remove('ring-4', 'ring-earth-600', 'border-earth-600');
+                    b.disabled = true;
+                });
+                
+                matchedPairsCount++;
+                const currentQ = currentSessionQuestions[currentQuestionIndex];
+                
+                if (matchedPairsCount === currentQ.pairs.length) {
+                    isAnswerLocked = true;
+                    const isPerfectMatch = (currentQuestionMistakes === 0);
+                    if (isPerfectMatch) {
+                        currentScore++;
+                        document.getElementById('current-score').innerText = currentScore;
+                    }
+                    setTimeout(() => { showFeedbackModal(isPerfectMatch, currentQ.explanation); }, 500);
+                }
+            } else {
+                // 配對失敗，震動並閃爍紅色
+                currentQuestionMistakes++;
+                [left, right].forEach(b => {
+                    b.classList.replace('bg-earth-100', 'bg-red-500');
+                    b.classList.replace('text-earth-800', 'text-white');
+                    b.classList.add('shake-animation');
+                });
+                
+                setTimeout(() => {
+                    [left, right].forEach(b => {
+                        b.classList.replace('bg-red-500', 'bg-earth-100');
+                        b.classList.replace('text-white', 'text-earth-800');
+                        b.classList.remove('shake-animation', 'ring-4', 'ring-earth-600', 'border-earth-600');
+                    });
+                }, 800);
+            }
+        }
+
+        /* ========== 共通顯示邏輯 ========== */
         function showFeedbackModal(isCorrect, explanation) {
             const modal = document.getElementById('feedback-modal');
             const modalHeader = document.getElementById('modal-header');
@@ -307,11 +382,9 @@
             modal.classList.remove('hidden-screen');
         }
 
-        // 進入下一題或結算
         function nextQuestion() {
             document.getElementById('feedback-modal').classList.add('hidden-screen');
             currentQuestionIndex++;
-            
             if (currentQuestionIndex < totalQuestionsPerGame) {
                 loadQuestion();
             } else {
@@ -319,16 +392,13 @@
             }
         }
 
-        // 顯示結算畫面
         function showResult() {
             hideAllScreens();
             document.getElementById('screen-result').classList.remove('hidden-screen');
-            
             document.getElementById('final-score').innerText = currentScore;
-            document.getElementById('extra-balls').innerText = currentScore; // 一題換一球
+            document.getElementById('extra-balls').innerText = currentScore;
         }
 
-        // 重置遊戲 (工作人員點擊)
         function resetGame() {
             incrementTotalPlayers();
             hideAllScreens();
